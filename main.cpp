@@ -113,12 +113,22 @@ string resourceRoot;
 
 // Game level boundaries
 struct boxBorders {
-    float left = -0.15;
-    float right = 0.15;
-    float top = 0.1;
-    float bottom = -0.1;
+    float left = -0.1;
+    float right = 0.1;
+    float top = 0.07;
+    float bottom = -0.07;
+    float back = 0.04;
+    float front = 0.042;
 };
 boxBorders boundaries;
+
+/*struct wallBorders {
+    float left = -0.05;
+    float right = 0.05;
+    float top = 0.05;
+    float bottom = -0.05;
+};
+wallBorders visualBoundaries;*/
 
 
 //------------------------------------------------------------------------------
@@ -143,9 +153,6 @@ void errorCallback(int error, const char* a_description);
 void keyCallback(GLFWwindow* a_window, int a_key, int a_scancode, int a_action, int a_mods);
 
 // callback to render graphic scene
-void updateGraphics(void);
-
-// this function renders the scene
 void updateGraphics(void);
 
 // this function contains the main haptics simulation loop
@@ -385,21 +392,64 @@ int main(int argc, char* argv[])
     light->setDir(-3.0,-0.5, 0.0);
 
     // set lighting conditions
-    light->m_ambient.set(0.4f, 0.4f, 0.4f);
+    light->m_ambient.set(0.6f, 0.6f, 0.6f);
     light->m_diffuse.set(0.8f, 0.8f, 0.8f);
     light->m_specular.set(1.0f, 1.0f, 1.0f);
 
-    //WALLS
+    //WALLS   
+    cMaterial wallMats;
+    wallMats.setShininess(100);
+
+    cShapeBox *leftWall = new cShapeBox(5,0.0001,0.3);
+    //leftWall->translate(0, -0.06, 0);
+    world -> addChild(leftWall);
+    leftWall->setLocalPos(0,boundaries.left,0);
+    //leftWall->setLocalPos(0,0,0);
+    leftWall->setMaterial(wallMats,true);
+
+    /*cTransform world_T_object = leftWall->getGlobalTransform();
+
+    // compute new transformation of object in global coordinates
+    //cTransform world_T_object = world_T_tool * tool_T_object;
+
+    // compute new transformation of object in local coordinates
+    //cTransform parent_T_world = selectedObject->getParent()->getLocalTransform();
+    cTransform parent_T_world (cVector3d(0,-0.02,0), cMatrix3d());
+
+    //parent_T_world.setLocalRot(cMatrix3d (1, 0, 0, 0, 1, 0, 0, 0, 1));
+    parent_T_world.invert();
+    cTransform parent_T_object = parent_T_world * world_T_object;
+    // assign new local transformation to object
+    leftWall->setLocalTransform(parent_T_object);*/
+
+
+
+    cShapeBox *rightWall = new cShapeBox(5,0.0001,0.3);
+    world -> addChild(rightWall);
+    rightWall-> setLocalPos(0,boundaries.right,0);
+
+    cShapeBox *ceiling = new cShapeBox(5,0.3,0.000001);
+    world-> addChild(ceiling);
+    ceiling->setLocalPos(0,0,boundaries.top);
+
+    cShapeBox *floor = new cShapeBox(5,0.3,0.000001);
+    world -> addChild(floor);
+    floor->setLocalPos(0,0,boundaries.bottom);
+
     for (int i = 0; i < 15; i++) {
         cShapeLine *borderRight = new cShapeLine(cVector3d(i*0.01,boundaries.right,1), cVector3d(i*0.01,boundaries.right,-1));
         world -> addChild(borderRight);
-        cShapeLine *borderLeft = new cShapeLine(cVector3d(0,boundaries.left,1), cVector3d(0,boundaries.left,-1));
+        cShapeLine *borderLeft = new cShapeLine(cVector3d(i*0.01,boundaries.left,1), cVector3d(i*0.01,boundaries.left,-1));
         world -> addChild(borderLeft);
+        cShapeLine *borderTop = new cShapeLine(cVector3d(i*0.01,-1,boundaries.top), cVector3d(i*0.01,1,boundaries.top));
+        world -> addChild(borderTop);
+        cShapeLine *borderBottom = new cShapeLine(cVector3d(i*0.01,-1,boundaries.bottom), cVector3d(i*0.01,1,boundaries.bottom));
+        world -> addChild(borderBottom);
     }
-    /*cShapeLine *borderRight = new cShapeLine(cVector3d(0,boundaries.right,1), cVector3d(0,boundaries.right,-1));
+    cShapeLine *borderRight = new cShapeLine(cVector3d(0,boundaries.right,1), cVector3d(0,boundaries.right,-1));
     world -> addChild(borderRight);
     cShapeLine *borderLeft = new cShapeLine(cVector3d(0,boundaries.left,1), cVector3d(0,boundaries.left,-1));
-    world -> addChild(borderLeft);*/
+    world -> addChild(borderLeft);
     cShapeLine *borderTop = new cShapeLine(cVector3d(0,-1,boundaries.top), cVector3d(0,1,boundaries.top));
     world -> addChild(borderTop);
     cShapeLine *borderBottom = new cShapeLine(cVector3d(0,-1,boundaries.bottom), cVector3d(0,1,boundaries.bottom));
@@ -415,6 +465,8 @@ int main(int argc, char* argv[])
     // get access to the first available haptic device found
     handler->getDevice(hapticDevice, 0);
 
+    cout << "AAAAAAAAAAAAAAAAAAAAH: " << boundaries.right << endl;
+
     // retrieve information about the current haptic device
     cHapticDeviceInfo hapticDeviceInfo = hapticDevice->getSpecifications();
 
@@ -429,7 +481,7 @@ int main(int argc, char* argv[])
     hapticDevice->setEnableGripperUserSwitch(true);
 
     // define the radius of the tool (sphere)
-    double toolRadius = 0.01;
+    double toolRadius = 0.005;
 
     // define a radius for the tool
     tool->setRadius(toolRadius);
@@ -471,18 +523,18 @@ int main(int argc, char* argv[])
     //object1 = new cMultiMesh();
 
     // add object to world
-    world->addChild(object);
+    //world->addChild(object);
     //world->addChild(object1);
 
     // load an object file
     bool fileload;
     //bool fileload1;
     //fileload = object->loadFromFile("L-block-2.obj");
-    fileload = object->loadFromFile("piggly.obj");
+    fileload = object->loadFromFile("L-block3.obj");
     if (!fileload)
     {
         #if defined(_MSVC)
-        fileload = object->loadFromFile("piggly.obj");
+        fileload = object->loadFromFile("L-block3.obj");
         #endif
     }
     if (!fileload)
@@ -618,7 +670,7 @@ int main(int argc, char* argv[])
 
     // create a label to display the haptic and graphic rate of the simulation
     labelRates = new cLabel(font);
-    labelRates->m_fontColor.setBlack();
+    labelRates->m_fontColor.setWhite();
     camera->m_frontLayer->addChild(labelRates);
 
     // create a background
@@ -849,22 +901,22 @@ void updateGraphics(void)
     /////////////////////////////////////////////////////////////////////
 
     cVector3d position;
+    cVector3d axis1;
+    double angle1;
     hapticDevice->getPosition(position);
     cTransform rotation;
   //  qDebug() << "Widget" << widget << "at position" << widget->pos();
     hapticDevice->getTransform(rotation);
   //  CHAI_DEBUG_PRINT("%s\n",rotation.getLocalRot());
 
-
+    rotation.getLocalRot().toAxisAngle(axis1, angle1);
 
     // update haptic and graphic rate data
     labelRates->setText(cStr(freqCounterGraphics.getFrequency(), 0) + " Hz / " +
         cStr(freqCounterHaptics.getFrequency(), 0) + " Hz / x: " +
         cStr(position.x()) + " y: " + cStr(position.y()) + " z: " +
-        cStr(position.z())+ "/ rotation: "
-    //    cStr(rotation.getLocalRot().getCol0()));
-
-                        );
+        cStr(position.z())+ "/ rotation: " +
+        cStr(angle1*(180/M_PI)) + " | rot-x: " + cStr(axis1.x()) + " rot-y: " + cStr(axis1.y()) + " rot-z: " + cStr(axis1.z()));
 
     // update position of label
     labelRates->setLocalPos((int)(0.5 * (width - labelRates->getWidth())), 15);
@@ -984,8 +1036,14 @@ void updateHaptics(void)
 
             // compute new transformation of object in local coordinates
             cTransform parent_T_world = selectedObject->getParent()->getLocalTransform();
+            //parent_T_world.setLocalRot(cMatrix3d (1, 0, 0, 0, 1, 0, 0, 0, 1));
             parent_T_world.invert();
             cTransform parent_T_object = parent_T_world * world_T_object;
+
+            // ROTATIONAL MATRICES
+            cMatrix3d yRot (cos(M_PI/2), 0, -sin(M_PI/2), 0, 1, 0, sin(M_PI/2), 0, cos(M_PI/2));
+
+            //parent_T_object.setLocalRot(cMatrix3d (1, 0, 0, 0, 1, 0, 0, 0, 1));
 
             // assign new local transformation to object
             selectedObject->setLocalTransform(parent_T_object);
@@ -1031,7 +1089,12 @@ void updateHaptics(void)
         if (newPosition.z() < boundaries.bottom){
             force.z(-1000*(newPosition.z()-boundaries.bottom));
         }
-
+        if (newPosition.x() < boundaries.back) {
+            force.x(-1000*(newPosition.x()-boundaries.back));
+        }
+        if (newPosition.x() > boundaries.front) {
+            force.x(-1000*(newPosition.x()-boundaries.front));
+        }
 
 
 
@@ -1069,7 +1132,7 @@ void updateHaptics(void)
     are met:
 
     * Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
+    notice, this list of conditions and the followi== true))ng disclaimer.
 
     * Redistributions in binary form must reproduce the above
     copyright notice, this list of conditions and the following
